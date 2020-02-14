@@ -49,14 +49,14 @@ func main() {
 		printMainMenu()
 		text, err := reader.ReadString('\n')
 		errorHandler(TypeNotFatal, err)
-		command, err := strconv.ParseInt(text, 10, 64)
+		command, err := strconv.ParseInt(text[:len(text)-1], 10, 64)
 		errorHandler(TypeNotFatal, err)
 
 		switch command {
 		case CommandRegister:
 			dialer.Write([]byte(commandsMapper[CommandRegister] + "\n"))
 		case CommandLogin:
-			dialer.Write([]byte(commandsMapper[CommandLogin] + "\n"))
+			login(dialer)
 		case CommandGetAllDialogues:
 			dialer.Write([]byte(commandsMapper[CommandGetAllDialogues] + "\n"))
 		case CommandGetAllUsersOnline:
@@ -84,7 +84,7 @@ func errorHandler(errType string, err error) {
 }
 
 func printMainMenu() {
-	fmt.Println("\nChoose one:")
+	fmt.Println("\nMenu:")
 	fmt.Println("\n" + "+++++++++++++++++++++")
 	fmt.Println(CommandRegister, ": Register")
 	fmt.Println(CommandLogin, ": Login")
@@ -94,4 +94,22 @@ func printMainMenu() {
 	fmt.Println(CommandCreateGroup, ": Create group")
 	fmt.Println(CommandExit, ": Exit chat app")
 	fmt.Println("+++++++++++++++++++++" + "\n")
+}
+
+func register() {}
+
+func login(conn *net.UDPConn) {
+	conn.Write([]byte(commandsMapper[CommandLogin] + "\n"))
+	buffer := make([]byte, 2048)
+	bytes, _, err := conn.ReadFromUDP(buffer)
+	errorHandler(TypeNotFatal, err)
+	msg := buffer[:bytes-1]
+	fmt.Println(string(msg))
+	reader := bufio.NewReader(os.Stdin)
+	text, err := reader.ReadString('\n')
+	errorHandler(TypeNotFatal, err)
+	conn.Write([]byte(text))
+	bytes, _, err = conn.ReadFromUDP(buffer)
+	errorHandler(TypeNotFatal, err)
+	fmt.Println(string(buffer[:bytes-1]))
 }

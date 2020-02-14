@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
+
+	"github.com/Muha113/6-th-term-labs/itirod/lab0/pkg/model"
 
 	"github.com/goapt/logger"
 )
@@ -33,6 +34,19 @@ var commandsMapper = map[string]int{
 	"@creategroup":    CommandCreateGroup,
 }
 
+type Client struct {
+	User   *model.User
+	Server *Server
+	Addr   *net.UDPAddr
+}
+
+type Server struct {
+	Listener  *net.UDPConn
+	Clients   map[uint]*Client
+	Dialogues []*model.Dialogue
+	Groups    []*model.Group
+}
+
 func main() {
 	fmt.Println("Starting server")
 	listener, err := net.ListenUDP("udp", &net.UDPAddr{
@@ -41,18 +55,24 @@ func main() {
 	})
 	errorHandler(TypeNotFatal, err)
 	defer listener.Close()
-	fmt.Println("Listening on", listener.LocalAddr())
+	serv := &Server{
+		Listener:  listener,
+		Clients:   make(map[uint]*Client),
+		Dialogues: make([]*model.Dialogue, 1),
+		Groups:    make([]*model.Group, 1),
+	}
+	fmt.Println("Listening on", serv.Listener.LocalAddr())
 	buffer := make([]byte, 2048)
 	for {
-		bytes, _, err := listener.ReadFromUDP(buffer)
+		bytes, addr, err := serv.Listener.ReadFromUDP(buffer)
 		errorHandler(TypeNotFatal, err)
-		command, err := strconv.ParseInt(string(buffer[:bytes-1]), 10, 64)
-		errorHandler(TypeNotFatal, err)
+		command, _ := commandsMapper[string(buffer[:bytes-1])]
 		switch command { // TODO: goroutines
 		case CommandRegister:
-			register()
+			//register(serv, addr, uint(len(serv.Clients)+1))
+			//fmt.Println(len(serv.Clients))
 		case CommandLogin:
-			login()
+			login(serv, addr, uint(len(serv.Clients)+1))
 		case CommandGetAllDialogues:
 			getAllDialogues()
 		case CommandGetAllUsersOnline:
@@ -75,4 +95,60 @@ func errorHandler(errType string, err error) {
 			logger.Error(err)
 		}
 	}
+}
+
+func register(server *Server, addr *net.UDPAddr, id uint) {
+	buffer := make([]byte, 4096)
+	client := &Client{
+		Addr:   addr,
+		Server: server,
+		User: &model.User{
+			ID:        id,
+			Dialogues: make([]uint, 1),
+			Groups:    make([]uint, 1),
+		},
+	}
+	server.Listener.WriteToUDP([]byte("Login:"+"\n"), addr)
+	bytes, _, err := server.Listener.ReadFromUDP(buffer)
+	errorHandler(TypeNotFatal, err)
+	name := string(buffer[:bytes-1])
+	client.User.Name = name
+	server.Clients[id] = client
+	server.Listener.WriteToUDP([]byte("Register success!"+"\n"), addr)
+}
+
+func login(server *Server, addr *net.UDPAddr, id uint) {
+	buffer := make([]byte, 4096)
+	client := &Client{
+		Addr:   addr,
+		Server: server,
+		User: &model.User{
+			ID:        id,
+			Dialogues: make([]uint, 1),
+			Groups:    make([]uint, 1),
+		},
+	}
+	server.Listener.WriteToUDP([]byte("Login:"+"\n"), addr)
+	bytes, _, err := server.Listener.ReadFromUDP(buffer)
+	errorHandler(TypeNotFatal, err)
+	name := string(buffer[:bytes-1])
+	client.User.Name = name
+	server.Clients[id] = client
+	server.Listener.WriteToUDP([]byte("Login success!"+"\n"), addr)
+}
+
+func getAllDialogues() {
+	fmt.Println("getAllDialogues")
+}
+
+func getAllUsersOnline() {
+	fmt.Println("getAllUsersOnline")
+}
+
+func createDialogue() {
+	fmt.Println("createDialogue")
+}
+
+func createGroup() {
+	fmt.Println("createGroup")
 }
