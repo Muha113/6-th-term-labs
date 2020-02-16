@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -11,23 +13,25 @@ import (
 )
 
 type Server struct {
-	conn       *net.UDPConn
-	messages   chan Message
-	clients    map[uint]*Client
-	messagesDB []Message
-	dialogues  map[uint][]*Conf
-	groups     map[uint][]*Conf
+	conn     *net.UDPConn
+	messages chan Message
+	clients  map[uint]*Client
+	//messagesDB []Message
+	dialogues map[uint]*Conf
+	groups    map[uint]*Conf
 }
 
 type Conf struct {
-	clients  []*Client
+	clients  map[uint]*Client
 	messages []Message
 }
 
 type Client struct {
-	id   uint
-	name string
-	addr *net.UDPAddr
+	id          uint
+	name        string
+	dialoguesID []uint
+	groupsID    []uint
+	addr        *net.UDPAddr
 }
 
 type Message struct {
@@ -41,8 +45,9 @@ type Message struct {
 }
 
 type MessageHeader struct {
-	MessageType common.MessageType `json:"type"`
-	ID          uint               `json:"id"`
+	MessageType common.MessageType       `json:"type"`
+	CreateConf  common.CreateConfRequest `json:"createConf"`
+	ID          uint                     `json:"id"`
 }
 
 //complete
@@ -59,16 +64,63 @@ func handleError(errType common.ErrorType, err error) {
 	}
 }
 
-//not complete
+//seems to be complete
+//add checking isLoggedIn
 func (s *Server) handleMessage() {
 	buffer := make([]byte, 1024)
 	bytes, remoteAddr, err := s.conn.ReadFromUDP(buffer)
 	handleError(common.ERROR, err)
+	fmt.Println("Handling msg from", remoteAddr.String())
 	var message Message
 	err = json.Unmarshal(buffer[:bytes-1], &message)
 	handleError(common.ERROR, err)
 	switch message.MessageHeader.MessageType {
 	case common.FUNC:
+		switch common.FromStrToCmd[message.Content] {
+		case common.COMMANDCREATEDIALOGUE:
+			id := uint(len(s.dialogues) + 1)
+			s.dialogues[id] = &Conf{
+				clients:  make(map[uint]*Client),
+				messages: make([]Message, 100),
+			}
+			for _, v := range message.MessageHeader.CreateConf.IDs {
+				val, ok := s.clients[v]
+				if ok {
+					s.dialogues[id].clients[val.id] = val
+					message.RecieverAddr = val.addr
+					message.ErrorSending = nil
+					message.MessageHeader.ID = id
+					s.messages <- message
+				}
+			}
+			//TODO: make response msg. UPD: done
+			// message.RecieverAddr = remoteAddr
+			// message.ErrorSending = nil
+			// message.MessageHeader.ID = id
+			// s.messages <- message
+		case common.COMMANDCREATEGROUP:
+			id := uint(len(s.groups) + 1)
+			s.groups[id] = &Conf{
+				clients:  make(map[uint]*Client),
+				messages: make([]Message, 100),
+			}
+			for _, v := range message.MessageHeader.CreateConf.IDs {
+				val, ok := s.clients[v]
+				if ok {
+					s.groups[id].clients[val.id] = val
+					message.RecieverAddr = val.addr
+					message.ErrorSending = nil
+					message.MessageHeader.ID = id
+					s.messages <- message
+				}
+			}
+			//TODO: make response msg. UPD: done
+			// message.RecieverAddr = remoteAddr
+			// message.ErrorSending = nil
+			// message.MessageHeader.ID = id
+			// s.messages <- message
+		default:
+		}
 	case common.LOGIN:
 		if s.isLoggedIn(message) {
 			message.Content = ""
@@ -76,18 +128,32 @@ func (s *Server) handleMessage() {
 			message.ErrorSending = errors.New("You have already logged in")
 			s.messages <- message
 		} else {
-			s.clients[uint(len(s.clients)+1)] = &Client{
-				id:   uint(len(s.clients)),
+			tmp := uint(len(s.clients) + 1)
+			s.clients[tmp] = &Client{
+				id:   tmp,
 				name: message.UserName,
 				addr: remoteAddr,
 			}
+			message.UserID = tmp
 			message.Content = "Login success!"
 			message.RecieverAddr = remoteAddr
 			message.ErrorSending = nil
 			s.messages <- message
 		}
 	case common.DIALOGUE:
+		tmp := message.MessageHeader.ID
+		s.dialogues[tmp].messages = append(s.dialogues[tmp].messages, message)
+		for _, v := range s.dialogues[tmp].clients {
+			message.RecieverAddr = v.addr
+			s.messages <- message
+		}
 	case common.GROUP:
+		tmp := message.MessageHeader.ID
+		s.groups[tmp].messages = append(s.groups[tmp].messages, message)
+		for _, v := range s.groups[tmp].clients {
+			message.RecieverAddr = v.addr
+			s.messages <- message
+		}
 	case common.GENERAL:
 		for _, v := range s.clients {
 			message.RecieverAddr = v.addr
@@ -100,7 +166,7 @@ func (s *Server) handleMessage() {
 //complete
 func (s *Server) isLoggedIn(msg Message) bool {
 	for _, v := range s.clients {
-		if v.name == msg.UserName {
+		if strings.Compare(v.name, msg.UserName) == 0 {
 			return true
 		}
 	}
@@ -109,21 +175,35 @@ func (s *Server) isLoggedIn(msg Message) bool {
 
 //complete
 func (s *Server) sendMessage() {
-	message := <-s.messages
-	text, err := json.Marshal(message)
-	handleError(common.ERROR, err)
-	s.conn.WriteToUDP(text, message.RecieverAddr)
+	for {
+		message := <-s.messages
+		fmt.Println("Sending msg to", message.RecieverAddr.String())
+		text, err := json.Marshal(message)
+		handleError(common.ERROR, err)
+		text = append(text, byte('\n'))
+		s.conn.WriteToUDP(text, message.RecieverAddr)
+		fmt.Println("Message sent to", message.RecieverAddr.String())
+	}
 }
 
 func main() {
-	port := ":8000"
-	udpAddress, err := net.ResolveUDPAddr("udp4", port)
-	handleError(common.ERROR, err)
+	//port := ":8000"
+	// udpAddress, err := net.ResolveUDPAddr("udp4", port)
+	//handleError(common.FATAl, err)
 	var s Server
+	var err error
 	s.messages = make(chan Message, 40)
 	s.clients = make(map[uint]*Client)
-	s.conn, err = net.ListenUDP("udp", udpAddress)
-	handleError(common.ERROR, err)
+	s.dialogues = make(map[uint]*Conf)
+	s.groups = make(map[uint]*Conf)
+	fmt.Println("Starting server...")
+	udpAddr := &net.UDPAddr{
+		Port: 8000,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+	s.conn, err = net.ListenUDP("udp", udpAddr)
+	handleError(common.FATAl, err)
+	fmt.Println("Status OK. Listening on", s.conn.LocalAddr())
 	defer s.conn.Close()
 
 	go s.sendMessage()
