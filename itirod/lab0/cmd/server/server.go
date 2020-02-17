@@ -13,10 +13,9 @@ import (
 )
 
 type Server struct {
-	conn     *net.UDPConn
-	messages chan Message
-	clients  map[uint]*Client
-	//messagesDB []Message
+	conn      *net.UDPConn
+	messages  chan Message
+	clients   map[uint]*Client
 	dialogues map[uint]*Conf
 	groups    map[uint]*Conf
 }
@@ -45,9 +44,10 @@ type Message struct {
 }
 
 type MessageHeader struct {
-	MessageType common.MessageType       `json:"type"`
-	CreateConf  common.CreateConfRequest `json:"createConf"`
-	ID          uint                     `json:"id"`
+	MessageType           common.MessageType       `json:"type"`
+	MessageRecievedStatus common.MessageStatusCode `json:"status"`
+	CreateConf            common.CreateConfRequest `json:"createConf"`
+	ID                    uint                     `json:"id"`
 }
 
 //complete
@@ -187,9 +187,6 @@ func (s *Server) sendMessage() {
 }
 
 func main() {
-	//port := ":8000"
-	// udpAddress, err := net.ResolveUDPAddr("udp4", port)
-	//handleError(common.FATAl, err)
 	var s Server
 	var err error
 	s.messages = make(chan Message, 40)

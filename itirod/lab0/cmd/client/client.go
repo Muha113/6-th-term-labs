@@ -1,5 +1,9 @@
 package main
 
+//add some features: joined general chat room, user #name left, etc.
+//add dialgue feature: recieved msg
+//make some code refactor
+
 import (
 	"bufio"
 	"encoding/json"
@@ -51,9 +55,10 @@ type Message struct {
 }
 
 type MessageHeader struct {
-	MessageType common.MessageType       `json:"type"`
-	CreateConf  common.CreateConfRequest `json:"createConf"`
-	ID          uint                     `json:"id"`
+	MessageType           common.MessageType       `json:"type"`
+	MessageRecievedStatus common.MessageStatusCode `json:"status"`
+	CreateConf            common.CreateConfRequest `json:"createConf"`
+	ID                    uint                     `json:"id"`
 }
 
 type Client struct {
@@ -95,7 +100,6 @@ func (c *Client) sendMessage() {
 }
 
 //seems to be complete
-//add handling CREATEDIALOGUE and CREATEGROUP response message
 func (c *Client) printMessage() {
 	for {
 		msg := <-c.printMessagesQueue
@@ -131,7 +135,19 @@ func (c *Client) printMessage() {
 			}
 		case common.DIALOGUE:
 			if c.state.state == INDIALOGUE && c.state.id == msg.MessageHeader.ID {
-				fmt.Printf("#%s# %s: %s\n", msg.UserName, msg.Time, msg.Content)
+				if msg.MessageHeader.MessageRecievedStatus == 0 {
+					fmt.Printf("#%s# %s: %s\n", msg.UserName, msg.Time, msg.Content)
+				} else {
+					switch msg.MessageHeader.MessageRecievedStatus {
+					case common.RECIEVED:
+						fmt.Println("<Message recieved>")
+					case common.FAILED:
+						fmt.Println("<Client failed to recieve message>")
+					case common.TIMEOUT:
+						fmt.Println("<Time out recieving message>")
+					default:
+					}
+				}
 			}
 		case common.GROUP:
 			if c.state.state == INGROUP && c.state.id == msg.MessageHeader.ID {
@@ -410,8 +426,18 @@ func (c *Client) handleRecieved() {
 			}
 			c.printMessagesQueue <- msg
 		case common.DIALOGUE:
-			c.dialogues[msg.MessageHeader.ID] = append(c.dialogues[msg.MessageHeader.ID], msg)
-			c.printMessagesQueue <- msg
+			if msg.MessageHeader.MessageRecievedStatus == 0 {
+				c.dialogues[msg.MessageHeader.ID] = append(c.dialogues[msg.MessageHeader.ID], msg)
+				c.printMessagesQueue <- msg
+				if msg.UserName != c.userName {
+					msg.MessageHeader.MessageRecievedStatus = common.RECIEVED
+					c.sendingMessageQueue <- msg
+				}
+			} else {
+				if msg.UserName == c.userName {
+					c.printMessagesQueue <- msg
+				}
+			}
 		case common.GROUP:
 			c.groups[msg.MessageHeader.ID] = append(c.groups[msg.MessageHeader.ID], msg)
 			c.printMessagesQueue <- msg
@@ -431,8 +457,8 @@ func printMenu() {
 	fmt.Println(common.COMMANDCREATEGROUP, ": Create group")
 	fmt.Println(common.COMMANDCHOOSEDIALOGUE, ": Choose dialogue")
 	fmt.Println(common.COMMANDCHOOSEGROUP, ": Choose group")
-	fmt.Println(common.COMMANDGENERAL, ": enter general chat room")
-	fmt.Println(common.COMMANDEXIT, ": exit")
+	fmt.Println(common.COMMANDGENERAL, ": Enter general chat room")
+	fmt.Println(common.COMMANDEXIT, ": Exit")
 	fmt.Println("++++++++++++" + "\n")
 }
 

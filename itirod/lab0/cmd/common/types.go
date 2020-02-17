@@ -10,6 +10,14 @@ const (
 	GENERAL
 )
 
+type MessageStatusCode uint
+
+const (
+	RECIEVED MessageStatusCode = iota + 1
+	FAILED
+	TIMEOUT
+)
+
 type ErrorType int
 
 const (
