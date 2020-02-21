@@ -1,9 +1,5 @@
 package main
 
-//add some features: joined general chat room, user #name left, etc.
-//add dialgue feature: recieved msg
-//make some code refactor
-
 import (
 	"bufio"
 	"encoding/json"
@@ -99,7 +95,7 @@ func (c *Client) sendMessage() {
 	}
 }
 
-//seems to be complete
+//complete
 func (c *Client) printMessage() {
 	for {
 		msg := <-c.printMessagesQueue
@@ -173,8 +169,7 @@ func (c *Client) readInput() {
 	}
 }
 
-//not complete
-//some revisions needed
+//complete
 func (c *Client) handleInput(input string) {
 	switch c.state.state {
 	case INMENU:
@@ -394,8 +389,7 @@ func isTransitPrevState(input string) bool {
 	return false
 }
 
-//not complete
-//it will handle errors and message logic (ex: saving)
+//complete
 func (c *Client) handleRecieved() {
 	for {
 		msg := <-c.recievedMessagesQueue

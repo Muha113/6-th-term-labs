@@ -64,8 +64,7 @@ func handleError(errType common.ErrorType, err error) {
 	}
 }
 
-//seems to be complete
-//add checking isLoggedIn
+//complete
 func (s *Server) handleMessage() {
 	buffer := make([]byte, 1024)
 	bytes, remoteAddr, err := s.conn.ReadFromUDP(buffer)
