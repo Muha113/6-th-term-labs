@@ -26,8 +26,8 @@ func Hash(text string) string {
 	return hashStr
 }
 
-func HandleError(err error) {
+func HandleError(err error, adds string) {
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatal(adds, err)
 	}
 }
