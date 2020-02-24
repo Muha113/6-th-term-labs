@@ -2,6 +2,7 @@ package as
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 
@@ -20,12 +21,14 @@ type AS struct {
 
 //supposed to user is registered
 func (a *AS) HandleClientRequest() {
+	fmt.Println("+++++ Handling client request... +++++")
 	conn, err := a.Listener.Accept()
 	common.HandleError(err, "AS-23: ")
 	defer conn.Close()
 	buff := make([]byte, 1024)
 	bytes, err := conn.Read(buff)
 	common.HandleError(err, "AS-27: ")
+	fmt.Println("----- Body client request:", string(common.PrettyPrint(buff[:bytes-1])))
 	var req common.ASClientRequest
 	err = json.Unmarshal(buff[:bytes-1], &req)
 	common.HandleError(err, "AS-30: ")
@@ -37,6 +40,7 @@ func (a *AS) HandleClientRequest() {
 	sessionKey := common.GenKey(32)
 	addr := "127.0.0.1:8001"
 	common.HandleError(err, "AS-38: ")
+	fmt.Println("+++++ Build client response... +++++")
 	resp := common.ASClientResponse{
 		SessionKey: sessionKey,
 		TS:         req.TS,
@@ -52,8 +56,10 @@ func (a *AS) HandleClientRequest() {
 	}
 	respJSON, err := json.Marshal(resp)
 	common.HandleError(err, "AS-53: ")
+	fmt.Println("----- Body client response:", string(common.PrettyPrint(respJSON)))
 	tgtJSON, err := json.Marshal(tgt)
 	common.HandleError(err, "AS-55: ")
+	fmt.Println("----- Body TGT client response:", string(common.PrettyPrint(tgtJSON)))
 	respEncrypted := des.Encode(string(respJSON), a.ClientsKeysMap[req.ID])
 	tgtEncrypted := des.Encode(string(tgtJSON), a.TGSKey)
 	msg := common.ASResponseEncrypted{
@@ -62,6 +68,7 @@ func (a *AS) HandleClientRequest() {
 	}
 	msgJSON, err := json.Marshal(msg)
 	common.HandleError(err, "AS-63: ")
+	fmt.Println("----- Body client response encrypted:", string(common.PrettyPrint(msgJSON)))
 	msgJSON = append(msgJSON, '\n')
 	conn.Write(msgJSON)
 }

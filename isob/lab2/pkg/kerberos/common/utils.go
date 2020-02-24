@@ -1,7 +1,9 @@
 package common
 
 import (
+	"bytes"
 	"crypto/md5"
+	"encoding/json"
 	"math/rand"
 	"time"
 
@@ -30,4 +32,13 @@ func HandleError(err error, adds string) {
 	if err != nil {
 		logrus.Fatal(adds, err)
 	}
+}
+
+func PrettyPrint(b []byte) []byte {
+	var out bytes.Buffer
+	err := json.Indent(&out, b, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return out.Bytes()
 }
