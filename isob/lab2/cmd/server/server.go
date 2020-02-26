@@ -62,7 +62,7 @@ func (s *Server) HandleClientRequest() {
 
 func main() {
 	server := Server{
-		ServerKey: "serverMasterKey",
+		ServerKey: "ServMKey",
 		Listener:  nil,
 	}
 	var err error

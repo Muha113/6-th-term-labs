@@ -37,7 +37,7 @@ func (a *AS) HandleClientRequest() {
 	timeParsed, err := time.Parse("2006-01-02 15:04:05", timeStamp)
 	common.HandleError(err, "AS-34: ")
 	req.TS = timeParsed.String()
-	sessionKey := common.GenKey(32)
+	sessionKey := common.GenKey(8)
 	addr := "127.0.0.1:8001"
 	common.HandleError(err, "AS-38: ")
 	fmt.Println("+++++ Build client response... +++++")

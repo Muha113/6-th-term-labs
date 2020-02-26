@@ -50,7 +50,7 @@ func (t *TGS) HandleClientRequest() {
 	dialer.Close()
 	fmt.Println("+++++ Build client response... +++++")
 	serverKey := string(buff[:bytes-1])
-	generatedKey := common.GenKey(32)
+	generatedKey := common.GenKey(8)
 	cliResp := common.TGSClientResponse{
 		GeneratedKey: generatedKey,
 		Dest:         cliReq.Req,

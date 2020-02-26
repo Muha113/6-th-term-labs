@@ -13,7 +13,7 @@ import (
 
 func main() {
 	as := as.AS{
-		TGSKey:         "tgsMasterKey",
+		TGSKey:         "TGSMsKey",
 		ClientsKeysMap: make(map[string]string),
 		ServersKeysMap: make(map[string]string),
 		ExpTime:        time.Hour * 200,
@@ -21,7 +21,7 @@ func main() {
 	}
 	var err error
 	as.ClientsKeysMap["user1"] = common.Hash("user1PasswdKey")
-	as.ServersKeysMap["TestServer"] = "serverMasterKey"
+	as.ServersKeysMap["TestServer"] = "ServMKey"
 	logrus.Println("Starting AS...")
 	as.Listener, err = net.Listen("tcp", "127.0.0.1:8000")
 	common.HandleError(err, "ASServer-23: ")

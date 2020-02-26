@@ -67,6 +67,7 @@ func (c *Client) RequestAS() {
 		Req:  "TestServer",
 		Addr: c.ASConn.LocalAddr().String(),
 	}
+	//logrus.Error("KeyByte:", []byte(c.PasswordKey), " KeyStr:", c.PasswordKey, " Len:", len(c.PasswordKey))
 	req.TS = des.Encode(req.TS, c.PasswordKey)
 	msg, err := json.Marshal(req)
 	common.HandleError(err, "Client-70: ")
@@ -105,6 +106,7 @@ func (c *Client) RequestTGS() {
 	reqJSON, err := json.Marshal(req)
 	common.HandleError(err, "Client-100: ")
 	fmt.Println("----- Body request:", string(common.PrettyPrint(reqJSON)))
+	//logrus.Error([]byte(c.SessionKey), " str:", c.SessionKey)
 	reqEncrypted := des.Encode(string(reqJSON), c.SessionKey)
 	msg := common.TGSRequestEncrypted{
 		TGSClientRequest: reqEncrypted,

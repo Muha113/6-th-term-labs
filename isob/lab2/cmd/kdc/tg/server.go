@@ -11,7 +11,7 @@ import (
 
 func main() {
 	tgs := tgs.TGS{
-		TGSKey:     "tgsMasterKey",
+		TGSKey:     "TGSMsKey",
 		SessionKey: "",
 		Listener:   nil,
 	}
