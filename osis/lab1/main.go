@@ -19,7 +19,6 @@ func writeFile(files []string) {
 
 func main() {
 	var files []string
-
 	root := "/home/myxtar/Downloads"
 
 	fmt.Println("Enter extension: ")
