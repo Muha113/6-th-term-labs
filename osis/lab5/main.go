@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 	"time"
-	
+
 	"github.com/Muha113/6-th-term-labs/osis/lab5/keylogs"
 	"github.com/sirupsen/logrus"
 )

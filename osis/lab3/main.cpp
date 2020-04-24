@@ -1,72 +1,124 @@
 #include <iostream>
-#include <vector>
-#include <iomanip>
 
 using namespace std;
 
-vector<vector<double>> multiple_matrix(vector<vector<double>> &A, vector<vector<double>> &B) {
-    vector<vector<double>> ans(A.size(), vector<double>(B[0].size()));
-    for (int i = 0; i < A.size(); ++i) {
-        for (int j = 0; j < B[0].size(); ++j) {
-            for (int k = 0; k < B.size(); ++k) {
-                ans[i][j] += A[i][k] * B[k][j];
+struct node {
+    int val;
+    node* left;
+    node* right;
+};
+
+node* new_node(int val) {
+    node* n = new node;
+    n->val = val;
+    n->left = nullptr;
+    n->right = nullptr;
+    return n;
+}
+
+struct tree {
+private:
+    node* root;
+    void updown_print(node* p);
+    void clear(node* p);
+    node* remove(node* p, int val);
+public:
+    tree() { root = nullptr; }
+    void insert(int val);
+    void remove(int val);
+    void clear();
+    void updown_print();
+};
+
+void tree::insert(int val) {
+    if(root == nullptr) {
+        root = new_node(val);
+        return;
+    }
+    node** cur = &root;
+    while((*cur) != nullptr) {
+        if((*cur)->val == val) return;
+        if(val < (*cur)->val) cur = &(*cur)->left;
+        else cur = &(*cur)->right;
+    }
+    (*cur) = new_node(val);
+}
+
+node* tree::remove(node *p, int val) {
+    if(p == nullptr)
+        return p;
+
+    if(val == p->val) {
+        node* tmp;
+        if(p->right == nullptr)
+            tmp = p->left;
+        else {
+            node* ptr = p->right;
+            if(ptr->left == nullptr){
+                ptr->left = p->left;
+                tmp = ptr;
+            } else {
+                node* pmin = ptr->left;
+                while(pmin->left != nullptr){
+                    ptr  = pmin;
+                    pmin = ptr->left;
+                }
+                ptr->left = pmin->right;
+                pmin->left = p->left;
+                pmin->right = p->right;
+                tmp = pmin;
             }
         }
-    }
-    return ans;
+        delete p;
+        return tmp;
+    } else if(val < p->val)
+        p->left = remove(p->left, val);
+    else
+        p->right = remove(p->right, val);
+    return p;
 }
 
-vector<double> multiple_matrix_vector(vector<vector<double>> &A, vector<double> &B) {
-    vector<double> res(B.size(), 0);
-    for (int i = 0; i < B.size(); i++) {
-        for (int j = 0; j < B.size(); j++) {
-            res[i] += A[i][j] * B[j];
-        }
-    }
-    return res;
+void tree::remove(int val) {
+    root = remove(root, val);
 }
 
-void print_m(vector<vector<double>> A) {
-    for(int i = 0; i < A.size(); i++) {
-        for (int j = 0; j < A[0].size(); j++)
-            cout << setprecision(10) << A[i][j] << " ";
-        cout << "\n";
+void tree::clear(node *p) {
+    if(p != nullptr) {
+        clear(p->left);
+        clear(p->right);
+        delete(p);
+        p = nullptr;
     }
+}
+
+void tree::clear() {
+    clear(root);
+}
+
+void tree::updown_print(node *p) {
+    if(p != nullptr) {
+        cout << p->val << " ";
+        updown_print(p->left);
+        updown_print(p->right);
+    }
+}
+
+void tree::updown_print() {
+    cout << "\n";
+    updown_print(root);
 }
 
 int main() {
-    int n, k;
-    cin>>n>>k;
-    k--;
-    vector<vector<double>> A(n, vector<double>(n));
-    vector<vector<double>> B(n, vector<double>(n));
-    vector<double> X(n);
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++)
-            cin>>A[i][j];
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++)
-            cin>>B[i][j];
-    for(int i = 0; i < n; i++)
-        cin>>X[i];
-    vector<double> L = multiple_matrix_vector(B, X);
-    if(L[k] == 0.) {
-        cout<<"NO";
-        return 0;
-    }
-    vector<double> L2(n);
-    double t = L[k];
-    L[k] = -1;
-    for(int i = 0; i < n; i++)
-        L2[i] = (-1.0 / t) * L[i];
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < n; j++) {
-            if(i == j) A[i][j] = 1;
-            else A[i][j] = 0;
-        }
-    for(int j = 0; j < n; j++)
-        A[j][k] = L2[j];
-    vector<vector<double>> B_new = multiple_matrix(A, B);
-    cout<<"YES\n";
-    print_m(B_new);
+    tree t;
+    t.insert(3);
+    t.insert(5);
+    t.insert(1);
+    t.insert(4);
+    t.updown_print();
+    t.remove(1);
+    t.updown_print();
+    t.clear();
+    t.insert(9);
+    t.insert(2);
+    t.updown_print();
 }
